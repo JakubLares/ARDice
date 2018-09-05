@@ -40,7 +40,7 @@ class ViewController: UIViewController {
     }
 }
 
-extension UIViewController: ARSCNViewDelegate {
+extension ViewController: ARSCNViewDelegate {
 
     public func renderer(_ renderer: SCNSceneRenderer, didAdd node: SCNNode, for anchor: ARAnchor) {
         guard let planeAnchor = anchor as? ARPlaneAnchor else { return }
@@ -52,5 +52,16 @@ extension UIViewController: ARSCNViewDelegate {
         gridMaterial.diffuse.contents = UIImage(named: "art.scnassets/grid.png")
         plane.materials = [gridMaterial]
         node.addChildNode(planeNode)
+    }
+
+    open override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let touch = touches.first else { return }
+        let touchLocation = touch.location(in: sceneView)
+        let results = sceneView.hitTest(touchLocation, types: .existingPlaneUsingExtent)
+        guard !results.isEmpty else {
+            print("touched somewhere else")
+            return
+        }
+        print("touched the plane")
     }
 }
