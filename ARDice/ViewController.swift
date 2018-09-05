@@ -15,12 +15,23 @@ class ViewController: UIViewController {
     @IBOutlet var sceneView: ARSCNView!
 
     var diceArray = [SCNNode]()
+    var stackView = UIStackView()
+
     let rollAllButton: UIButton = {
         let button = UIButton()
         button.setTitle("Roll All!", for: .normal)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(rollAll), for: .touchUpInside)
         button.backgroundColor = .lightGray
+        return button
+    }()
+
+    let removeAllButton: UIButton = {
+        let button = UIButton()
+        button.setTitle("Remove All!", for: .normal)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(removeAll), for: .touchUpInside)
+        button.backgroundColor = .red
         return button
     }()
     
@@ -31,11 +42,25 @@ class ViewController: UIViewController {
         sceneView.delegate = self
         sceneView.autoenablesDefaultLighting  = true
 
-        sceneView.addSubview(rollAllButton)
+        setupStackView()
+        activateConstraints()
+    }
+
+    private func setupStackView() {
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        stackView.addArrangedSubview(rollAllButton)
+        stackView.addArrangedSubview(removeAllButton)
+        stackView.axis = .horizontal
+        stackView.spacing = 10
+        sceneView.addSubview(stackView)
+    }
+
+    private func activateConstraints() {
         NSLayoutConstraint.activate([
-            rollAllButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
-            rollAllButton.centerXAnchor.constraint(equalTo: sceneView.centerXAnchor),
-            rollAllButton.widthAnchor.constraint(equalToConstant: 100)
+            stackView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            stackView.centerXAnchor.constraint(equalTo: sceneView.centerXAnchor),
+            rollAllButton.widthAnchor.constraint(equalToConstant: 150),
+            removeAllButton.widthAnchor.constraint(equalTo: rollAllButton.widthAnchor, multiplier: 1)
             ])
     }
     
@@ -53,9 +78,12 @@ class ViewController: UIViewController {
     }
 
     @objc private func rollAll() {
-        diceArray.forEach {
-            rollDice($0)
-        }
+        diceArray.forEach { rollDice($0) }
+    }
+
+    @objc private func removeAll() {
+        diceArray.forEach { $0.removeFromParentNode() }
+        diceArray.removeAll()
     }
 
     private func rollDice(_ dice: SCNNode) {
