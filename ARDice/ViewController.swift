@@ -19,11 +19,7 @@ class ViewController: UIViewController {
 
         sceneView.debugOptions = [ARSCNDebugOptions.showFeaturePoints]
         sceneView.delegate = self
-//        sceneView.autoenablesDefaultLighting  = true
-//        let diceScene = SCNScene(named: "art.scnassets/diceCollada.scn")
-//        guard let diceNode = diceScene?.rootNode.childNode(withName: "Dice", recursively: true) else { return }
-//        diceNode.position = SCNVector3(0, 0, -0.1)
-//        sceneView.scene.rootNode.addChildNode(diceNode)
+        sceneView.autoenablesDefaultLighting  = true
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -58,10 +54,12 @@ extension ViewController: ARSCNViewDelegate {
         guard let touch = touches.first else { return }
         let touchLocation = touch.location(in: sceneView)
         let results = sceneView.hitTest(touchLocation, types: .existingPlaneUsingExtent)
-        guard !results.isEmpty else {
-            print("touched somewhere else")
-            return
-        }
-        print("touched the plane")
+        guard let hitResult = results.first else { return }
+        let diceScene = SCNScene(named: "art.scnassets/diceCollada.scn")
+        guard let diceNode = diceScene?.rootNode.childNode(withName: "Dice", recursively: true) else { return }
+        diceNode.position = SCNVector3(hitResult.worldTransform.columns.3.x,
+                                       hitResult.worldTransform.columns.3.y + diceNode.boundingSphere.radius,
+                                       hitResult.worldTransform.columns.3.z)
+        sceneView.scene.rootNode.addChildNode(diceNode)
     }
 }
