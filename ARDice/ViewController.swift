@@ -38,12 +38,24 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        sceneView.debugOptions = [ARSCNDebugOptions.showFeaturePoints]
         sceneView.delegate = self
         sceneView.autoenablesDefaultLighting  = true
 
         setupStackView()
         activateConstraints()
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+
+        let configuration = ARWorldTrackingConfiguration()
+        configuration.planeDetection = .horizontal
+        sceneView.session.run(configuration)
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        sceneView.session.pause()
     }
 
     private func setupStackView() {
@@ -62,19 +74,6 @@ class ViewController: UIViewController {
             rollAllButton.widthAnchor.constraint(equalToConstant: 150),
             removeAllButton.widthAnchor.constraint(equalTo: rollAllButton.widthAnchor, multiplier: 1)
             ])
-    }
-    
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-
-        let configuration = ARWorldTrackingConfiguration()
-        configuration.planeDetection = .horizontal
-        sceneView.session.run(configuration)
-    }
-    
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        sceneView.session.pause()
     }
 
     @objc private func rollAll() {
@@ -95,6 +94,29 @@ class ViewController: UIViewController {
                                           duration: 1))
     }
 
+    private func addDice(atLocation location: ARHitTestResult?) {
+        guard let location = location else { return }
+        let diceScene = SCNScene(named: "art.scnassets/diceCollada.scn")
+        guard let diceNode = diceScene?.rootNode.childNode(withName: "Dice", recursively: true) else { return }
+        diceNode.position = SCNVector3(location.worldTransform.columns.3.x,
+                                       location.worldTransform.columns.3.y + diceNode.boundingSphere.radius,
+                                       location.worldTransform.columns.3.z)
+        diceArray.append(diceNode)
+        sceneView.scene.rootNode.addChildNode(diceNode)
+        rollDice(diceNode)
+    }
+
+    private func createPlane(with planeAnchor: ARPlaneAnchor) -> SCNNode {
+        let plane = SCNPlane(width: CGFloat(planeAnchor.extent.x), height: CGFloat(planeAnchor.extent.z))
+        let planeNode = SCNNode(geometry: plane)
+        planeNode.position = SCNVector3(planeAnchor.extent.x, 0, planeAnchor.extent.z)
+        planeNode.transform = SCNMatrix4MakeRotation(-Float.pi / 2, 1, 0, 0)
+        let gridMaterial = SCNMaterial()
+        gridMaterial.diffuse.contents = UIImage(named: "art.scnassets/grid.png")
+        plane.materials = [gridMaterial]
+        return planeNode
+    }
+
     override func motionEnded(_ motion: UIEventSubtype, with event: UIEvent?) {
         rollAll()
     }
@@ -104,28 +126,13 @@ extension ViewController: ARSCNViewDelegate {
 
     public func renderer(_ renderer: SCNSceneRenderer, didAdd node: SCNNode, for anchor: ARAnchor) {
         guard let planeAnchor = anchor as? ARPlaneAnchor else { return }
-        let plane = SCNPlane(width: CGFloat(planeAnchor.extent.x), height: CGFloat(planeAnchor.extent.z))
-        let planeNode = SCNNode(geometry: plane)
-        planeNode.position = SCNVector3(planeAnchor.extent.x, 0, planeAnchor.extent.z)
-        planeNode.transform = SCNMatrix4MakeRotation(-Float.pi / 2, 1, 0, 0)
-        let gridMaterial = SCNMaterial()
-        gridMaterial.diffuse.contents = UIImage(named: "art.scnassets/grid.png")
-        plane.materials = [gridMaterial]
-        node.addChildNode(planeNode)
+        node.addChildNode(createPlane(with: planeAnchor))
     }
 
     open override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         let touchLocation = touch.location(in: sceneView)
         let results = sceneView.hitTest(touchLocation, types: .existingPlaneUsingExtent)
-        guard let hitResult = results.first else { return }
-        let diceScene = SCNScene(named: "art.scnassets/diceCollada.scn")
-        guard let diceNode = diceScene?.rootNode.childNode(withName: "Dice", recursively: true) else { return }
-        diceNode.position = SCNVector3(hitResult.worldTransform.columns.3.x,
-                                       hitResult.worldTransform.columns.3.y + diceNode.boundingSphere.radius,
-                                       hitResult.worldTransform.columns.3.z)
-        diceArray.append(diceNode)
-        sceneView.scene.rootNode.addChildNode(diceNode)
-        rollDice(diceNode)
+        addDice(atLocation: results.first)
     }
 }
